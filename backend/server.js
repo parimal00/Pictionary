@@ -10,6 +10,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { registerRoomHandlers } from "./src/services/roomHandler.js"
 import authRoutes from "./src/routes/authRoutes.ts"
+import roomRoutes from "./src/routes/roomRoutes.ts"
 dotenv.config()
 
 const app = express()
@@ -20,6 +21,7 @@ app.use(cors({ origin: process.env.CLIENT_URL || '*' }));
 app.use(express.json());
 app.use(morgan('dev'));
 app.use(authRoutes);
+app.use(roomRoutes);
 
 const io = new Server(httpServer, {
   cors: {

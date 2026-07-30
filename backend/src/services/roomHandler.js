@@ -1,5 +1,4 @@
 
-import {createRoom } from './roomService.js';
 import { SOCKET_EVENTS } from '../socket/events.js';
 export const registerRoomHandlers = (io, socket) => {
     socket.on(SOCKET_EVENTS.JOIN_ROOM, (roomId, callback) => {
