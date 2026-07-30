@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z, ZodError } from 'zod';
-import { ApiError } from '../utils/apiError.js';
+import { ApiError } from '../utils/apiError.ts';
 type AnyZodObject = z.ZodObject<any, any>;
 
 export const validate =
@@ -15,8 +15,12 @@ export const validate =
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const errorMessage = error.issues.map((err) => err.message).join(', ');
-        return next(new ApiError(400, errorMessage));
+        const formattedErrors = error.issues.map((err) => ({
+          field: err.path.filter((p) => p !== 'body' && p !== 'query' && p !== 'params').join('.'),
+          message: err.message,
+        }));
+
+        return next(new ApiError('Validation Failed', 400, formattedErrors));
       }
       next(error);
     }

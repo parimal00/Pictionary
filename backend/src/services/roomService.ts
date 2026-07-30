@@ -1,11 +1,13 @@
-import { RoomModel, IRoom } from '../models/Room';
+import { RoomModel, type IRoom } from '../models/Room.ts';
 import crypto from 'node:crypto';
 
 export interface CreateRoomInput {
   hostId: string;
-  maxPlayers?: number;
-  drawTime?: number;
-  rounds?: number;
+  settings?: {
+    maxPlayers?: number;
+    drawTime?: number;
+    rounds?: number;
+  };
 }
 
 const generateRoomCode = (): string => {
@@ -19,13 +21,14 @@ export const roomService = {
   createRoom: async (input: CreateRoomInput): Promise<IRoom> => {
     const code = generateRoomCode();
 
+    console.log(input.hostId)
     const room = await RoomModel.create({
-      code,
+      code: code,
       hostId: input.hostId,
       settings: {
-        maxPlayers: input.maxPlayers ?? 8,
-        drawTime: input.drawTime ?? 80,
-        rounds: input.rounds ?? 3,
+        maxPlayers: input.settings?.maxPlayers ?? 8,
+        drawTime: input.settings?.drawTime ?? 80,
+        rounds: input.settings?.rounds ?? 3,
       },
     });
 

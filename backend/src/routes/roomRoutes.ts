@@ -1,8 +1,10 @@
 import { Router } from "express";
-import { roomService } from "../services/roomService";
-import { createRoomSchema } from "../validators/roomValidator";
-import { validate } from "../middlewares/validate";
+import { createRoom } from "../controllers/roomController.ts";
+import { createRoomSchema } from "../validators/roomValidator.ts";
+import { validate } from "../middlewares/validate.ts";
 
-const router = Router()
+const router = Router();
 
-router.post('/rooms/create',validate(createRoomSchema), roomService.createRoom)
+router.post("/rooms/create", validate(createRoomSchema), createRoom);
+
+export default router;

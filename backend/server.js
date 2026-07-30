@@ -11,13 +11,17 @@ import morgan from 'morgan';
 import { registerRoomHandlers } from "./src/services/roomHandler.js"
 import authRoutes from "./src/routes/authRoutes.ts"
 import roomRoutes from "./src/routes/roomRoutes.ts"
+import { globalErrorHandler } from './src/middlewares/errorHandler.ts';
+import { connectDB } from "./config/dbconnection.ts"
 dotenv.config()
 
 const app = express()
+
+connectDB()
 const httpServer = createServer(app)
 
 app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_URL || '*' }));
+app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5174' }));
 app.use(express.json());
 app.use(morgan('dev'));
 app.use(authRoutes);
@@ -45,7 +49,7 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
-
+app.use(globalErrorHandler);
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => {
   console.log(`Game server active on http://localhost:${PORT}`);
