@@ -21,7 +21,6 @@ export const roomService = {
   createRoom: async (input: CreateRoomInput): Promise<IRoom> => {
     const code = generateRoomCode();
 
-    console.log(input.hostId)
     const room = await RoomModel.create({
       code: code,
       hostId: input.hostId,

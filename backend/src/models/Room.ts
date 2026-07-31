@@ -12,6 +12,13 @@ export interface IRoom extends Document{
 
 const RoomSchema: Schema = new Schema(
   {
+    code: {
+      type: String,
+      required: true,
+      unique: true,
+      uppercase: true,
+      trim: true,
+    },
     hostId: { type: String, required: true },
     settings: {
       maxPlayers: { type: Number, default: 8, min: 2, max: 12 },
