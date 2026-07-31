@@ -8,6 +8,7 @@ interface GuestLoginProps {
 
 export function GuestLogin({ onLogin }: GuestLoginProps) {
   const [username, setUsername] = useState("");
+  
   const { mutate: login, isPending, error } = useGuestLogin(onLogin);
   const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();

@@ -31,7 +31,7 @@ export function Lobby({ user, onEnterRoom, onLogout }: LobbyProps) {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        {/* Top User Bar */}
+
         <div style={styles.topBar}>
           <div style={styles.userBadge}>
             <span style={styles.avatar}>👤</span>
@@ -42,16 +42,13 @@ export function Lobby({ user, onEnterRoom, onLogout }: LobbyProps) {
           </button>
         </div>
 
-        {/* Header */}
         <div style={styles.header}>
           <h1 style={styles.title}>Game Lobby</h1>
           <p style={styles.subtitle}>Host a private game or join your friends</p>
         </div>
 
-        {/* Error Banner */}
         {error && <div style={styles.errorBanner}>{error.message}</div>}
 
-        {/* Action Buttons */}
         <div style={styles.actionContainer}>
           <button
             onClick={handleCreateRoom}

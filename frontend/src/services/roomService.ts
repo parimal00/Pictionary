@@ -12,10 +12,12 @@ export interface Room {
 export const roomApi = {
   createRoom: async (user: User): Promise<Room> => {
     const response = await api.post("/rooms/create", {
-      user,
-      maxPlayers: 8,
-      drawTime: 80,
-      rounds: 3,
+      hostId: user.id || "10",
+      settings: {
+        maxPlayers: 10,
+        drawTime: 80,
+        rounds: 3,
+      },
     });
     return response.data.data.room;
   },
