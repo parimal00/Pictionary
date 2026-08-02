@@ -3,6 +3,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IRoom extends Document{
     code: String;
     hostId: String;
+    status: String;
     settings:{
         maxPlayers: Number;
         drawTime: number;
@@ -20,6 +21,11 @@ const RoomSchema: Schema = new Schema(
       trim: true,
     },
     hostId: { type: String, required: true },
+    status: { 
+      type: String, 
+      enum: ['LOBBY', 'PLAYING', 'ENDED'], 
+      default: 'LOBBY'
+    },
     settings: {
       maxPlayers: { type: Number, default: 8, min: 2, max: 12 },
       drawTime: { type: Number, default: 80, min: 30, max: 180 },
