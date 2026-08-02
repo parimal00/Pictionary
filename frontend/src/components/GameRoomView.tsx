@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { User } from "../types/user";
+import { DrawingCanvas } from "./DrawingCanvas";
 interface Player {
   id: string;
   username: string;
@@ -107,17 +108,15 @@ export function GameRoomView({ user }: { user: User }) {
             </div>
           ) : (
             <div style={styles.canvasContainer}>
-              <div style={styles.canvasHeader}>
-                <span style={{ color: "#64748b", fontSize: "0.85rem", fontWeight: 600 }}>
-                  CANVAS WORKSPACE
-                </span>
-              </div>
-              <div style={styles.canvasArea}>
-                <p style={{ color: "#94a3b8", fontSize: "0.95rem" }}>
-                  [ HTML5 Canvas Engine Active ]
-                </p>
-              </div>
-            </div>
+  <div style={styles.canvasHeader}>
+    <span style={{ color: "#64748b", fontSize: "0.85rem", fontWeight: 600 }}>
+      CANVAS WORKSPACE
+    </span>
+  </div>
+  <div style={styles.canvasArea}>
+    <DrawingCanvas isDrawingAllowed={true} />
+  </div>
+</div>
           )}
         </main>
 
