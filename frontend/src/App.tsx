@@ -5,24 +5,7 @@ import { type User } from "./types/user";
 import { GuestLogin } from "./components/GuestLogin";
 import { Lobby } from "./components/Lobby.tsx";
 import { ProtectedRoute } from "./components/ProtectedRoute.tsx";
-
-function GameRoomView({ user }: { user: User }) {
-  const navigate = useNavigate();
-  const { roomCode } = useParams<{ roomCode: string }>();
-
-  return (
-    <div style={{ padding: "2rem", fontFamily: "sans-serif", color: "#fff", backgroundColor: "#0f172a", minHeight: "100vh" }}>
-      <button 
-        onClick={() => navigate("/lobby")} 
-        style={{ padding: "0.5rem 1rem", cursor: "pointer", borderRadius: "6px", border: "1px solid #475569", background: "#1e293b", color: "#fff" }}
-      >
-        ← Back to Lobby
-      </button>
-      <h2>Room: {roomCode}</h2>
-      <p>Player: <strong>{user.username}</strong></p>
-    </div>
-  );
-}
+import { GameRoomView } from "./components/GameRoomView.tsx";
 
 function AppRoutes() {
   const navigate = useNavigate();
