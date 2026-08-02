@@ -1,27 +1,22 @@
-import * as authService from '../services/authService.ts';
-// import { ApiError } from '../utils/apiError'
-import express from 'express';
-import type { Request, Response, NextFunction } from 'express'; 
-interface GuestLoginBody {
-    username: string;
-}
-// type Request = express.Request;
-// type Response = express.Response;
-// type NextFunction = express.NextFunction;
-export const guestLogin = async (
-        req: Request<{}, {}, GuestLoginBody>,
-        res: Response,
-        next: NextFunction
-    ): Promise<void> => {
+import type { Request, Response } from 'express';
+import { userService } from '../services/userService.ts';
+
+export const guestLogin = async (req: Request, res: Response) => {
   try {
     const { username } = req.body;
-    const user = authService.createGuestUser(username);
+    const user = await userService.createGuestUser(username);
 
-    res.status(200).json({
+    res.status(201).json({
       status: 'success',
-      data: { user },
+      data: {
+        user: {
+          id: user._id,
+          username: user.username,
+          isGuest: user.isGuest,
+        },
+      },
     });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    res.status(400).json({ status: 'fail', message: error.message });
   }
-}
+};

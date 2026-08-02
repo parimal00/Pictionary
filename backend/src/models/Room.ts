@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IRoom extends Document{
     code: String;
-    hostId: String;
+    hostId: mongoose.Types.ObjectId | string;
     status: String;
     settings:{
         maxPlayers: Number;
@@ -20,7 +20,7 @@ const RoomSchema: Schema = new Schema(
       uppercase: true,
       trim: true,
     },
-    hostId: { type: String, required: true },
+    hostId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     status: { 
       type: String, 
       enum: ['LOBBY', 'PLAYING', 'ENDED'], 

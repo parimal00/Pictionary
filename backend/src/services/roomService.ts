@@ -11,7 +11,7 @@ export interface CreateRoomInput {
 }
 
 const generateRoomCode = (): string => {
-  return crypto.randomBytes(3).toString('hex').toUpperCase(); // Generates 6-character code
+  return crypto.randomBytes(3).toString('hex').toUpperCase(); 
 };
 
 export const roomService = {
