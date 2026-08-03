@@ -1,12 +1,13 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { User } from "../types/user";
 import { DrawingCanvas } from "./DrawingCanvas";
+import { socket } from "../socket.ts"; 
+
 interface Player {
   id: string;
   username: string;
   score: number;
-  isHost: boolean;
   hasGuessed?: boolean;
 }
 
@@ -17,19 +18,20 @@ export function GameRoomView({ user }: { user: User }) {
   const [gameState, setGameState] = useState<"LOBBY" | "PLAYING">("LOBBY");
   const [copied, setCopied] = useState(false);
   const [guessInput, setGuessInput] = useState("");
+  
+  // 2. Added real dynamic state for players and host check
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [hostId, setHostId] = useState<string | null>(null);
+
   const [chatMessages, setChatMessages] = useState<
     Array<{ sender: string; text: string; isSystem?: boolean }>
   >([
     { sender: "System", text: `Welcome to room ${roomCode}!`, isSystem: true },
   ]);
 
-  const [players] = useState<Player[]>([
-    { id: user.id, username: user.username, score: 0, isHost: true },
-    { id: "2", username: "Alex", score: 120, isHost: false },
-    { id: "3", username: "Sarah", score: 80, isHost: false, hasGuessed: true },
-  ]);
-
-  const isHost = players.find((p) => p.id === user.id)?.isHost;
+  const isHost = hostId === user.id;
+  console.log("Current user:", user);
+  console.log("host_id:", hostId);
 
   const handleCopyCode = () => {
     if (roomCode) {
@@ -49,6 +51,26 @@ export function GameRoomView({ user }: { user: User }) {
     ]);
     setGuessInput("");
   };
+
+  useEffect(() => {
+    console.log("host_id:", hostId);
+    if (!roomCode) return;
+
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    socket.emit("join_room", { roomCode, user });
+
+    socket.on("room_updated", ({ players, hostId }: { players: Player[]; hostId: string }) => {
+      setPlayers(players);
+      setHostId(hostId);
+    });
+
+    return () => {
+      socket.off("room_updated");
+    };
+  }, [roomCode, user]);
 
   return (
     <div style={styles.container}>
@@ -85,7 +107,7 @@ export function GameRoomView({ user }: { user: User }) {
           {gameState === "LOBBY" ? (
             <div style={styles.lobbyCard}>
               <div style={styles.iconCircle}>🎮</div>
-              <h2 style={{ margin: "0 0 8px 0", fontSize: "1.5rem", fontWeight: 700 }}>
+              <h2 style={{color:"white", margin: "0 0 8px 0", fontSize: "1.5rem", fontWeight: 700 }}>
                 Waiting for Players
               </h2>
               <p style={{ color: "#94a3b8", fontSize: "0.95rem", margin: "0 0 24px 0" }}>
@@ -108,15 +130,15 @@ export function GameRoomView({ user }: { user: User }) {
             </div>
           ) : (
             <div style={styles.canvasContainer}>
-  <div style={styles.canvasHeader}>
-    <span style={{ color: "#64748b", fontSize: "0.85rem", fontWeight: 600 }}>
-      CANVAS WORKSPACE
-    </span>
-  </div>
-  <div style={styles.canvasArea}>
-    <DrawingCanvas isDrawingAllowed={true} />
-  </div>
-</div>
+              <div style={styles.canvasHeader}>
+                <span style={{ color: "#64748b", fontSize: "0.85rem", fontWeight: 600 }}>
+                  CANVAS WORKSPACE
+                </span>
+              </div>
+              <div style={styles.canvasArea}>
+                <DrawingCanvas isDrawingAllowed={true} />
+              </div>
+            </div>
           )}
         </main>
 
@@ -139,7 +161,7 @@ export function GameRoomView({ user }: { user: User }) {
                         {p.username}
                         {p.id === user.id && <span style={styles.youBadge}>you</span>}
                       </div>
-                      {p.isHost && <span style={styles.hostRole}>Host 👑</span>}
+                      {p.id === hostId && <span style={styles.hostRole}>Host 👑</span>}
                     </div>
                   </div>
 
