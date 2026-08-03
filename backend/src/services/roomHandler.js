@@ -1,5 +1,5 @@
 
-import { SOCKET_EVENTS } from '../socket/events.js';
+import { SOCKET_EVENTS } from '../sockets/events.js';
 export const registerRoomHandlers = (io, socket) => {
     socket.on(SOCKET_EVENTS.JOIN_ROOM, (roomId, callback) => {
         socket.join(roomId);
