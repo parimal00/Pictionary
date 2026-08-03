@@ -20,7 +20,7 @@ export function registerRoomHandlers(io: Server, socket: Socket) {
       socketId: socket.id,
       score: room.players.get(user.id)?.score || 0, 
     };
-    
+
     room.players.set(user.id, player);
 
     const playerList = Array.from(room.players.values());
@@ -30,6 +30,23 @@ export function registerRoomHandlers(io: Server, socket: Socket) {
       hostId: room.hostId,
     });
   });
+
+  socket.on('start_game',(roomCode: string) => {
+    const code = roomCode.toUpperCase();
+  
+  io.to(code).emit('game_started');
+  })
+
+
+  socket.on('draw_line', ({ roomCode, lineData }) => {
+  const code = roomCode.toUpperCase();
+  socket.to(code).emit('draw_line', lineData);
+});
+
+socket.on('clear_canvas', ({ roomCode }) => {
+  const code = roomCode.toUpperCase();
+  socket.to(code).emit('clear_canvas');
+});
 
   socket.on('disconnecting', () => {
     socket.rooms.forEach((roomCode) => {
