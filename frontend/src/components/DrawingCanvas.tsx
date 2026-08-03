@@ -1,45 +1,95 @@
 import React, { useRef, useState, useEffect } from "react";
+import { socket } from "../socket";
 
-interface DrawingCanvasProps {
-  isDrawingAllowed?: boolean; // Controls whether mouse/touch events draw
+interface Point {
+  x: number;
+  y: number;
 }
 
-const COLORS = [
-  "#000000", // Black
-  "#ef4444", // Red
-  "#3b82f6", // Blue
-  "#22c55e", // Green
-  "#eab308", // Yellow
-  "#a855f7", // Purple
-  "#ffffff", // White
-];
+interface LineData {
+  prevPoint: Point | null;
+  currentPoint: Point;
+  color: string;
+  brushSize: number;
+}
 
+interface DrawingCanvasProps {
+  roomCode: string;
+  isDrawingAllowed?: boolean;
+}
+
+const COLORS = ["#000000", "#ef4444", "#3b82f6", "#22c55e", "#eab308", "#a855f7", "#ffffff"];
 const BRUSH_SIZES = [2, 6, 12, 24];
 
-export function DrawingCanvas({ isDrawingAllowed = true }: DrawingCanvasProps) {
+export function DrawingCanvas({ roomCode, isDrawingAllowed = true }: DrawingCanvasProps) {
+  console.log("roomcoe",roomCode)
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const prevPointRef = useRef<Point | null>(null);
+
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState("#000000");
   const [brushSize, setBrushSize] = useState(6);
   const [isEraser, setIsEraser] = useState(false);
 
-  // Set white background on canvas init so downloads/clears don't show transparent grids
-  useEffect(() => {
+  // Helper function to draw on local canvas
+  const drawLineOnCanvas = (
+    prevPoint: Point | null,
+    currentPoint: Point,
+    strokeColor: string,
+    strokeWidth: number
+  ) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const ctx = canvas?.getContext("2d");
+    if (!ctx) return;
 
-    // Handle high-DPI scaling for sharp rendering
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = strokeWidth;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    ctx.beginPath();
+    if (prevPoint) {
+      ctx.moveTo(prevPoint.x, prevPoint.y);
+    } else {
+      ctx.moveTo(currentPoint.x, currentPoint.y);
     }
+    ctx.lineTo(currentPoint.x, currentPoint.y);
+    ctx.stroke();
+  };
+
+  const clearLocalCanvas = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!ctx || !canvas) return;
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  };
+
+  useEffect(() => {
+    clearLocalCanvas();
   }, []);
 
-  // Helper to get exact canvas-relative mouse coordinates
-  const getCoordinates = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  useEffect(() => {
+    const handleRemoteDraw = (lineData: LineData) => {
+      const { prevPoint, currentPoint, color, brushSize } = lineData;
+      drawLineOnCanvas(prevPoint, currentPoint, color, brushSize);
+    };
+
+    const handleRemoteClear = () => {
+      clearLocalCanvas();
+    };
+
+    socket.on("draw_line", handleRemoteDraw);
+    socket.on("clear_canvas", handleRemoteClear);
+
+    return () => {
+      socket.off("draw_line", handleRemoteDraw);
+      socket.off("clear_canvas", handleRemoteClear);
+    };
+  }, []);
+
+  const getCoordinates = (e: React.MouseEvent<HTMLCanvasElement>): Point => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
 
@@ -53,46 +103,50 @@ export function DrawingCanvas({ isDrawingAllowed = true }: DrawingCanvasProps) {
     };
   };
 
+  const handleDraw = (currentPoint: Point, prevPoint: Point | null) => {
+    if (!isDrawingAllowed) return;
+
+    const activeColor = isEraser ? "#ffffff" : color;
+
+    // 1. Draw locally
+    drawLineOnCanvas(prevPoint, currentPoint, activeColor, brushSize);
+
+    // 2. Broadcast stroke to backend
+    socket.emit("draw_line", {
+      roomCode,
+      lineData: { prevPoint, currentPoint, color: activeColor, brushSize },
+    });
+  };
+
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawingAllowed) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!ctx) return;
+    const currentPoint = getCoordinates(e);
 
-    const { x, y } = getCoordinates(e);
-    ctx.beginPath();
-    ctx.moveTo(x, y);
     setIsDrawing(true);
+    prevPointRef.current = currentPoint;
+
+    handleDraw(currentPoint, null);
   };
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawing || !isDrawingAllowed) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!ctx) return;
+    const currentPoint = getCoordinates(e);
 
-    const { x, y } = getCoordinates(e);
-    ctx.strokeStyle = isEraser ? "#ffffff" : color;
-    ctx.lineWidth = brushSize;
-    ctx.lineTo(x, y);
-    ctx.stroke();
+    handleDraw(currentPoint, prevPointRef.current);
+    prevPointRef.current = currentPoint;
   };
 
   const stopDrawing = () => {
     if (!isDrawing) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (ctx) ctx.closePath();
     setIsDrawing(false);
+    prevPointRef.current = null;
   };
 
   const handleClear = () => {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!ctx || !canvas) return;
+    if (!isDrawingAllowed) return;
+    clearLocalCanvas();
 
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    socket.emit("clear_canvas", { roomCode });
   };
 
   return (

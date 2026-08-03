@@ -19,7 +19,6 @@ export function GameRoomView({ user }: { user: User }) {
   const [copied, setCopied] = useState(false);
   const [guessInput, setGuessInput] = useState("");
   
-  // 2. Added real dynamic state for players and host check
   const [players, setPlayers] = useState<Player[]>([]);
   const [hostId, setHostId] = useState<string | null>(null);
 
@@ -52,25 +51,41 @@ export function GameRoomView({ user }: { user: User }) {
     setGuessInput("");
   };
 
-  useEffect(() => {
-    console.log("host_id:", hostId);
-    if (!roomCode) return;
+  const startGame = () => {
+    socket.emit("start_game",  roomCode );
+  }
 
-    if (!socket.connected) {
-      socket.connect();
-    }
 
-    socket.emit("join_room", { roomCode, user });
 
-    socket.on("room_updated", ({ players, hostId }: { players: Player[]; hostId: string }) => {
-      setPlayers(players);
-      setHostId(hostId);
-    });
+useEffect(() => {
+  if (!roomCode) return;
 
-    return () => {
-      socket.off("room_updated");
-    };
-  }, [roomCode, user]);
+  if (!socket.connected) {
+    socket.connect();
+  }
+
+  socket.emit("join_room", { roomCode, user });
+}, [roomCode, user]);
+
+
+useEffect(() => {
+  const handleRoomUpdated = ({ players, hostId }: { players: Player[]; hostId: string }) => {
+    setPlayers(players);
+    setHostId(hostId);
+  };
+
+  const handleGameStarted = () => {
+    setGameState("PLAYING");
+  };
+
+  socket.on("room_updated", handleRoomUpdated);
+  socket.on("game_started", handleGameStarted);
+
+  return () => {
+    socket.off("room_updated", handleRoomUpdated);
+    socket.off("game_started", handleGameStarted);
+  };
+}, []); 
 
   return (
     <div style={styles.container}>
@@ -116,7 +131,7 @@ export function GameRoomView({ user }: { user: User }) {
 
               {isHost ? (
                 <button
-                  onClick={() => setGameState("PLAYING")}
+                  onClick={startGame}
                   style={styles.startBtn}
                 >
                   Start Game Now
@@ -136,7 +151,7 @@ export function GameRoomView({ user }: { user: User }) {
                 </span>
               </div>
               <div style={styles.canvasArea}>
-                <DrawingCanvas isDrawingAllowed={true} />
+                <DrawingCanvas roomCode={roomCode} isDrawingAllowed={true} />
               </div>
             </div>
           )}
