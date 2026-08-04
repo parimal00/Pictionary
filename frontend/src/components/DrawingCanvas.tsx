@@ -80,12 +80,21 @@ export function DrawingCanvas({ roomCode, isDrawingAllowed = true }: DrawingCanv
       clearLocalCanvas();
     };
 
+    const handleDrawingHistory = (history: any[]) => {
+    history.forEach((lineData) => {
+      const { prevPoint, currentPoint, color, brushSize } = lineData;
+      drawLineOnCanvas(prevPoint, currentPoint, color, brushSize);
+    });
+  };
+
+    socket.on("drawing_history", handleDrawingHistory);
     socket.on("draw_line", handleRemoteDraw);
     socket.on("clear_canvas", handleRemoteClear);
 
     return () => {
       socket.off("draw_line", handleRemoteDraw);
       socket.off("clear_canvas", handleRemoteClear);
+      socket.off('drawing_history', handleDrawingHistory);
     };
   }, []);
 

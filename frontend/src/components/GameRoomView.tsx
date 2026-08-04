@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { User } from "../types/user";
 import { DrawingCanvas } from "./DrawingCanvas";
@@ -9,6 +9,13 @@ interface Player {
   username: string;
   score: number;
   hasGuessed?: boolean;
+}
+
+interface ChatMessage {
+  id?: string;
+  sender: string;
+  text: string;
+  isSystem?: boolean;
 }
 
 export function GameRoomView({ user }: { user: User }) {
@@ -28,9 +35,9 @@ export function GameRoomView({ user }: { user: User }) {
     { sender: "System", text: `Welcome to room ${roomCode}!`, isSystem: true },
   ]);
 
+  const chatBottomRef = useRef<HTMLDivElement | null>(null);
   const isHost = hostId === user.id;
-  console.log("Current user:", user);
-  console.log("host_id:", hostId);
+
 
   const handleCopyCode = () => {
     if (roomCode) {
@@ -42,12 +49,16 @@ export function GameRoomView({ user }: { user: User }) {
 
   const handleSendGuess = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!guessInput.trim()) return;
+    if (!guessInput.trim() || !roomCode) return;
 
-    setChatMessages((prev) => [
-      ...prev,
-      { sender: user.username, text: guessInput },
-    ]);
+    socket.emit("send_message", {
+      roomCode,
+      message: {
+        sender: user.username,
+        text: guessInput.trim(),
+      },
+    });
+
     setGuessInput("");
   };
 
@@ -69,23 +80,43 @@ useEffect(() => {
 
 
 useEffect(() => {
-  const handleRoomUpdated = ({ players, hostId }: { players: Player[]; hostId: string }) => {
+  const handleRoomUpdated = ({ players, hostId, status }: { players: Player[]; hostId: string; status: string }) => {
     setPlayers(players);
     setHostId(hostId);
+    setGameState(status);
   };
 
-  const handleGameStarted = () => {
-    setGameState("PLAYING");
+ const handleChatHistory = (history: ChatMessage[]) => {
+      setChatMessages([
+        { sender: "System", text: `Welcome to room ${roomCode}!`, isSystem: true },
+        ...history,
+      ]);
+    };
+  const handleReceiveMessage = (newMessage: ChatMessage) => {
+      setChatMessages((prev) => [...prev, newMessage]);
+    };
+
+  const handleGameStarted = (data) => {
+    console.log("Game started event received:", data);
+    setGameState(data.status);
   };
 
   socket.on("room_updated", handleRoomUpdated);
   socket.on("game_started", handleGameStarted);
+  socket.on("chat_history", handleChatHistory);
+  socket.on("receive_message", handleReceiveMessage);
 
   return () => {
     socket.off("room_updated", handleRoomUpdated);
     socket.off("game_started", handleGameStarted);
+    socket.off("chat_history", handleChatHistory);
+    socket.off("receive_message", handleReceiveMessage);
   };
 }, []); 
+
+useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
 
   return (
     <div style={styles.container}>
