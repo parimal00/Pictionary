@@ -1,5 +1,5 @@
 import { Server, Socket } from 'socket.io';
-import  { activeRooms, type Player } from '../utils/roomStore.ts';
+import  { activeRooms,type ChatMessage, type Player } from '../utils/roomStore.ts';
 import  type { JoinRoomPayload } from '../types/socket.ts';
 
 export function registerRoomHandlers(io: Server, socket: Socket) {
@@ -10,7 +10,14 @@ export function registerRoomHandlers(io: Server, socket: Socket) {
 
     let room = activeRooms.get(code);
     if (!room) {
-      room = { code, hostId: user.id, players: new Map() };
+      room = { 
+        code,
+        hostId: user.id, 
+        players: new Map(),
+        messages: [],
+        status: "LOBBY",
+        lines: [],
+      };
       activeRooms.set(code, room);
     }
 
@@ -28,25 +35,64 @@ export function registerRoomHandlers(io: Server, socket: Socket) {
     io.to(code).emit('room_updated', {
       players: playerList,
       hostId: room.hostId,
+      status: room.status,
     });
+
+    socket.emit('chat_history', room.messages);
+    socket.emit('drawing_history', room.lines);
   });
 
   socket.on('start_game',(roomCode: string) => {
-    const code = roomCode.toUpperCase();
-  
-  io.to(code).emit('game_started');
+   const room = activeRooms.get(roomCode);
+    if (!room) return;
+
+    room.status = "PLAYING";
+
+    io.to(roomCode).emit("game_started", {
+      players: room.players,
+      hostId: room.hostId,
+      status: room.status,
+    });
   })
 
+  // 4. Handle incoming chat messages
+  socket.on('send_message', ({ roomCode, message }: { roomCode: string; message: { sender: string; text: string } }) => {
+    const code = roomCode.toUpperCase();
+    const room = activeRooms.get(code);
+    if (!room) return;
+
+    const chatEntry: ChatMessage = {
+      id: `${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      sender: message.sender,
+      text: message.text,
+      createdAt: new Date().toISOString(),
+    };
+
+    if (!room.messages) room.messages = [];
+
+    room.messages.push(chatEntry);
+    if (room.messages.length > 50) {
+      room.messages.shift();
+    }
+
+    io.to(code).emit('receive_message', chatEntry);
+  });
 
   socket.on('draw_line', ({ roomCode, lineData }) => {
-  const code = roomCode.toUpperCase();
-  socket.to(code).emit('draw_line', lineData);
-});
+    const code = roomCode.toUpperCase();
+    const room = activeRooms.get(code);
+    if (!room) return;
+    room.lines.push(lineData);
+    socket.to(code).emit('draw_line', lineData);
+  });
 
-socket.on('clear_canvas', ({ roomCode }) => {
-  const code = roomCode.toUpperCase();
-  socket.to(code).emit('clear_canvas');
-});
+  socket.on('clear_canvas', ({ roomCode }) => {
+    const code = roomCode.toUpperCase();
+    const room = activeRooms.get(code);
+    if (!room) return;
+    room.lines = [];
+    socket.to(code).emit('clear_canvas');
+  });
 
   socket.on('disconnecting', () => {
     socket.rooms.forEach((roomCode) => {
