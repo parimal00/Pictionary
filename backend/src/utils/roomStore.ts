@@ -13,7 +13,7 @@ export interface ChatMessage {
   createdAt: string;
 }
 
-export interface ActiveRoom {
+export interface Room {
   code: string;
   hostId: string;
   players: Map<string, Player>; 
@@ -22,4 +22,4 @@ export interface ActiveRoom {
   lines: any[];
 }
 
-export const activeRooms = new Map<string, ActiveRoom>();
+export const activeRooms = new Map<string, Room>();
