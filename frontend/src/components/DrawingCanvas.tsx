@@ -66,8 +66,21 @@ export function DrawingCanvas({ roomCode, isDrawingAllowed = true }: DrawingCanv
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   };
 
+  const handleDrawingHistory = (history: any[]) => {
+      console.log("drawing history", history);
+    history.forEach((lineData) => {
+      const { prevPoint, currentPoint, color, brushSize } = lineData;
+      drawLineOnCanvas(prevPoint, currentPoint, color, brushSize);
+    });
+  };
+
+
+  const getDrawingHistory = () => {
+    socket.emit("get_lines_history",  roomCode);
+  }
   useEffect(() => {
     clearLocalCanvas();
+    getDrawingHistory();
   }, []);
 
   useEffect(() => {
@@ -79,13 +92,6 @@ export function DrawingCanvas({ roomCode, isDrawingAllowed = true }: DrawingCanv
     const handleRemoteClear = () => {
       clearLocalCanvas();
     };
-
-    const handleDrawingHistory = (history: any[]) => {
-    history.forEach((lineData) => {
-      const { prevPoint, currentPoint, color, brushSize } = lineData;
-      drawLineOnCanvas(prevPoint, currentPoint, color, brushSize);
-    });
-  };
 
     socket.on("drawing_history", handleDrawingHistory);
     socket.on("draw_line", handleRemoteDraw);

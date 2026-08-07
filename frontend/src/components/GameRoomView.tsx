@@ -9,6 +9,7 @@ interface Player {
   username: string;
   score: number;
   hasGuessed?: boolean;
+  isDrawer?: boolean;
 }
 
 interface ChatMessage {
@@ -28,6 +29,8 @@ export function GameRoomView({ user }: { user: User }) {
   
   const [players, setPlayers] = useState<Player[]>([]);
   const [hostId, setHostId] = useState<string | null>(null);
+
+  const [drawingWord, setDrawingWord] = useState<string | null>(null);
 
   const [chatMessages, setChatMessages] = useState<
     Array<{ sender: string; text: string; isSystem?: boolean }>
@@ -54,7 +57,7 @@ export function GameRoomView({ user }: { user: User }) {
     socket.emit("send_message", {
       roomCode,
       message: {
-        sender: user.username,
+        sender: user.id,
         text: guessInput.trim(),
       },
     });
@@ -78,10 +81,9 @@ useEffect(() => {
   socket.emit("join_room", { roomCode, user });
 }, [roomCode, user]);
 
-
-useEffect(() => {
-  const handleRoomUpdated = ({ players, hostId, status }: { players: Player[]; hostId: string; status: string }) => {
-    setPlayers(players);
+ const handleRoomUpdated = ({ players, hostId, status }: { players: Player[]; hostId: string; status: string }) => {
+  console.log("status", status)  
+  setPlayers(players);
     setHostId(hostId);
     setGameState(status);
   };
@@ -101,16 +103,23 @@ useEffect(() => {
     setGameState(data.status);
   };
 
+  const handleNewRound = (data) => {
+    setDrawingWord(data.word);
+  };
+
+useEffect(() => {
   socket.on("room_updated", handleRoomUpdated);
   socket.on("game_started", handleGameStarted);
   socket.on("chat_history", handleChatHistory);
   socket.on("receive_message", handleReceiveMessage);
+  socket.on('new_round', handleNewRound);
 
   return () => {
     socket.off("room_updated", handleRoomUpdated);
     socket.off("game_started", handleGameStarted);
     socket.off("chat_history", handleChatHistory);
     socket.off("receive_message", handleReceiveMessage);
+    socket.off('new_round', handleNewRound);
   };
 }, []); 
 
@@ -145,6 +154,20 @@ useEffect(() => {
               <span style={{ color: "#f59e0b" }}>⏱️ 45s</span>
             </div>
           </div>
+        )}
+
+        {gameState === "PLAYING" && (
+        <div style={styles.wordBanner}>
+          {drawingWord ? (
+            <span style={styles.drawerWordText}>
+              YOUR WORD: <strong>{drawingWord}</strong>
+            </span>
+          ) : (
+            <span style={styles.guessWordText}>
+              WORD: {drawingWord ? drawingWord.split('').map(() => '_ ').join('') : '_ _ _ _'}
+            </span>
+          )}
+        </div>
         )}
       </header>
 
@@ -570,4 +593,21 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "0.85rem",
     cursor: "pointer",
   },
+
+  wordBanner: {
+  backgroundColor: "#1e293b",
+  padding: "6px 16px",
+  borderRadius: "8px",
+  border: "1px solid #334155",
+  fontSize: "0.9rem",
+  fontWeight: 600,
+},
+drawerWordText: {
+  color: "#10b981",
+  letterSpacing: "1px",
+},
+guessWordText: {
+  color: "#38bdf8",
+  letterSpacing: "3px",
+},
 };
