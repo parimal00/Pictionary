@@ -3,6 +3,8 @@ export interface Player {
   username: string;
   socketId: string;
   score: number;
+  hasGuessed: boolean;
+  isDrawer: boolean
 }
 
 export interface ChatMessage {
@@ -20,6 +22,8 @@ export interface Room {
   messages: ChatMessage[];
   status: string;
   lines: any[];
+  drawerId?: string;
+  currentWord?: string;
 }
 
 export const activeRooms = new Map<string, Room>();

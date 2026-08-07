@@ -1,3 +1,4 @@
+import { pl } from 'zod/locales';
 import { activeRooms,type Room, type Player,type ChatMessage } from '../utils/roomStore.ts';
 
 export class RoomService {
@@ -10,6 +11,7 @@ export class RoomService {
     let room = activeRooms.get(code);
 
     if (!room) {
+      console.log(`Creating new room with code: ${code}`);
       room = {
         code,
         hostId: hostUser.id,
@@ -17,6 +19,7 @@ export class RoomService {
         messages: [],
         status: "LOBBY",
         lines: [],
+        currentWord: '',
       };
       activeRooms.set(code, room);
     }
@@ -30,6 +33,8 @@ export class RoomService {
       username: user.username,
       socketId,
       score: existingPlayer?.score || 0,
+      hasGuessed: existingPlayer?.hasGuessed || false,
+      isDrawer: existingPlayer?.isDrawer || false,
     };
     room.players.set(user.id, player);
     return player;
@@ -60,6 +65,7 @@ export class RoomService {
     }
 
     if (room.players.size === 0) {
+      console.log(`Deleting room with code: ${roomCode} as it has no remaining players.`);
       activeRooms.delete(roomCode);
       return null;
     }
@@ -69,4 +75,80 @@ export class RoomService {
       remainingPlayers: Array.from(room.players.values()),
     };
   }
+
+  static startNewRound(room: Room, wordBank: string[]) {
+    const playerList = Array.from(room.players.values());
+    if (playerList.length === 0) return null;
+
+    const randomDrawer = playerList[Math.floor(Math.random() * playerList.length)];
+    const randomWord = wordBank[Math.floor(Math.random() * wordBank.length)];
+
+    room.status = "PLAYING";
+    room.drawerId = randomDrawer.id;
+    room.currentWord = randomWord;
+
+    room.players.forEach((p) => {
+      p.hasGuessed = false;
+    });
+    
+
+    return { drawer: randomDrawer, word: randomWord };
+  }
+
+  static authorizedToGuess(room: Room, userId: string): boolean {
+      const player = room.players.get(userId);
+        if (!player ) {
+          return false;
+        }
+
+        if(room.drawerId === player.id){
+          return false;
+        }
+
+        return true;
+  }
+
+  static alreadyGuessed(room: Room, userId: string): boolean {
+    const player = room.players.get(userId);
+
+      if (!player ) {
+        return false;
+      }
+
+      if(player.hasGuessed){
+        return true;
+      }
+
+      return false;
+  }
+
+  static guessedCorrectly(room: Room, text: string, userId: string): boolean {
+    const player = room.players.get(userId);
+      if (!player ) {
+        return false;
+      }
+
+      const trimmedText = text.trim().toUpperCase();
+
+
+      if (trimmedText === room.currentWord) {
+      return true;
+    }
+
+      return false;
+  }
+
+  static markPlayerAsGuessed(room: Room, userId: string): void {
+    const player = room.players.get(userId);
+    if (player) {
+      player.hasGuessed = true;
+    }
+  } 
+
+  static updatePlayerScore(room: Room, userId: string, points: number): void {  
+    const player = room.players.get(userId);
+    if (player) {
+      player.score += points;
+    }
+  } 
 }

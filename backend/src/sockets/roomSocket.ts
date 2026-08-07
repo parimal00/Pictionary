@@ -1,13 +1,15 @@
 import { Server, Socket } from 'socket.io';
-import type { Room } from '../utils/roomStore.ts';
+import { activeRooms, type Room } from '../utils/roomStore.ts';
 import { 
   handleJoinRoom, 
   handleStartGame, 
   handleSendMessage,
   handleDrawLine, 
   handleClearCanvas, 
-  handleDisconnecting 
+  handleDisconnecting, 
+  getLinesHistory
 } from '../controllers/roomSocketController.ts';
+import { get } from 'mongoose';
 
 export function registerRoomHandlers(io: Server, socket: Socket) { 
   const emitGameStarted = (code: string, status: string) => {
@@ -25,10 +27,11 @@ export function registerRoomHandlers(io: Server, socket: Socket) {
     socket.emit('drawing_history', room.lines);
   };
 
-  socket.on('join_room', handleJoinRoom(io, socket, emitRoomSync, emitUserHistory));
+  socket.on('join_room', handleJoinRoom(io, socket));
   socket.on('start_game', handleStartGame(io, socket, emitRoomSync, emitGameStarted));
   socket.on('send_message', handleSendMessage(io, socket));
   socket.on('draw_line', handleDrawLine(socket));
+  socket.on('get_lines_history',getLinesHistory(socket));
   socket.on('clear_canvas', handleClearCanvas(socket));
   socket.on('disconnecting', handleDisconnecting(socket, emitRoomSync));
 }
