@@ -22,29 +22,26 @@ interface ChatMessage {
 
 export function GameRoomView({ user }: { user: User }) {
   const navigate = useNavigate();
+
   const { roomCode } = useParams<{ roomCode: string }>();
 
   const [gameState, setGameState] = useState<"LOBBY" | "PLAYING">("LOBBY");
   const [copied, setCopied] = useState(false);
   const [guessInput, setGuessInput] = useState("");
-
   const [players, setPlayers] = useState<Player[]>([]);
   const [hostId, setHostId] = useState<string | null>(null);
-
   const [drawingWord, setDrawingWord] = useState<string | null>(null);
-
   const [resultPlayers, setResultPlayers] = useState<Player[]>([]);
-
   const [openResultModal, setOpenResultModal] = useState(false);
-
   const [chatMessages, setChatMessages] = useState<
     Array<{ sender: string; text: string; isSystem?: boolean }>
   >([
     { sender: "System", text: `Welcome to room ${roomCode}!`, isSystem: true },
   ]);
-
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
   const isHost = hostId === user.id;
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [showWordModal, setShowWordModal] = useState(false);
 
 
   const handleCopyCode = () => {
@@ -75,6 +72,10 @@ export function GameRoomView({ user }: { user: User }) {
     console.log("Game started", roomCode);
   }
 
+  const startNextRound = () => {
+    startGame()
+    setOpenResultModal(false)
+  }
   useEffect(() => {
     if (!roomCode) return;
 
@@ -105,10 +106,13 @@ export function GameRoomView({ user }: { user: User }) {
   const handleGameStarted = (data: any) => {
     console.log("Game started event received:", data);
     setGameState(data.status as "LOBBY" | "PLAYING");
+    setTimeLeft(10);
+    setIsTimerRunning(true);
   };
 
   const handleNewRound = (data: any) => {
     console.log("New round event received:", data);
+    setShowWordModal(true)
     setDrawingWord(data.word);
   };
 
@@ -117,6 +121,8 @@ export function GameRoomView({ user }: { user: User }) {
     console.log("Round completed event received:", data);
     setResultPlayers(data.players);
   };
+
+  const [timeLeft, setTimeLeft] = useState(10);
 
   useEffect(() => {
     socket.on("room_updated", handleRoomUpdated);
@@ -140,6 +146,21 @@ export function GameRoomView({ user }: { user: User }) {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
+  useEffect(() => {
+  if (!isTimerRunning || timeLeft <= 0) return;
+
+  const timer = setInterval(() => {
+    setTimeLeft((prev) => {
+      if (prev <= 1) {
+        setIsTimerRunning(false);
+        return 0;
+      }
+      return prev - 1;
+    });
+  }, 1000);
+
+  return () => clearInterval(timer);
+}, [isTimerRunning, timeLeft]);
   return (
     <div style={styles.container}>
       <header style={styles.navbar}>
@@ -159,12 +180,8 @@ export function GameRoomView({ user }: { user: User }) {
 
         {gameState === "PLAYING" && (
           <div style={styles.gameInfoPills}>
-            <div style={styles.pill}>
-              <span style={{ color: "#94a3b8" }}>ROUND</span>
-              <strong style={{ color: "#f8fafc" }}>1/3</strong>
-            </div>
             <div style={{ ...styles.pill, borderColor: "#f59e0b" }}>
-              <span style={{ color: "#f59e0b" }}>⏱️ 45s</span>
+              <span style={{ color: "#f59e0b" }}>⏱️ {timeLeft}s</span>
             </div>
           </div>
         )}
@@ -297,7 +314,7 @@ export function GameRoomView({ user }: { user: User }) {
       onClose={() => setOpenResultModal(false)}
       footer={
         isHost ? (
-          <button onClick={() => startGame} style={styles.startBtn}>
+          <button onClick={startNextRound} style={styles.startBtn}>
             Start Next Round 🚀
           </button>
         ) : (
@@ -334,6 +351,22 @@ export function GameRoomView({ user }: { user: User }) {
               Nobody guessed correctly!
             </p>
           )}
+        </div>
+      </div>
+    </Modal>
+
+    <Modal
+      isOpen={showWordModal}
+      title="Your Turn"
+      onClose={() => setShowWordModal(false)}
+    >
+      <div style={{ textAlign: "center" }}>
+        <div style={{ backgroundColor: "#0f172a", padding: "12px", borderRadius: "8px", border: "1px solid #334155" }}>
+        
+             <p style={{ color: "#94a3b8", fontStyle: "italic", margin: 0 }}>
+              The secret word is {drawingWord}
+            </p>
+        
         </div>
       </div>
     </Modal>
