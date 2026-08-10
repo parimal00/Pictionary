@@ -30,20 +30,25 @@ export const handleJoinRoom = (
   console.log("on join room", room.status)
 };
 
-export const handleStartGame = (
-  io: Server, 
-  socket: Socket, 
-  emitSync: (code: string, room: Room) => void,
-  emitStart: (code: string, status: string) => void
-) => (roomCode: string) => {
+export const handleEndRound = (io: Server, room: Room) => {
+  RoomService.clearRoomTimer(room);
+
+  room.status = "ROUND_ENDED";
+
+  io.to(room.code).emit('round_completed', {
+    word: room.currentWord,
+    players: Array.from(room.players.values()),
+  });
+};
+
+export const handleStartRound = (io: Server, socket: Socket) => ( roomCode: string) => {
   const code = RoomService.getNormalizedCode(roomCode);
   const room = activeRooms.get(code);
   if (!room) return;
+  const roundData = RoomService.startNewRound(room, WORD_BANK);
+  if (!roundData) return;
 
-  room.status = "PLAYING";
-
-  const { drawer, word } = RoomService.startNewRound(room, WORD_BANK) || {};
-  if (!drawer || !word) return;
+  const { drawer, word } = roundData;
 
   const systemMsg = RoomService.addMessage(
     room, 
@@ -51,17 +56,21 @@ export const handleStartGame = (
     `${drawer.username} is drawing now!`
   );
 
-  io.to(code).emit('receive_message', systemMsg);
+  io.to(room.code).emit('clear_canvas');
+  io.to(room.code).emit('receive_message', systemMsg);
   io.to(drawer.socketId).emit('new_round', { drawer, word });  
-  io.to(code).emit('game_started', { status: room.status });
-  io.to(code).emit('room_updated', {
-      players: Array.from(room.players.values()),
-      hostId: room.hostId,
-      status: room.status,
-    });
-    console.log("game started", room.players)
-};
+  io.to(room.code).emit('game_started', { status: room.status });
+  console.log("game_stared_emitte", room.status)
+  io.to(room.code).emit('room_updated', {
+    players: Array.from(room.players.values()),
+    hostId: room.hostId,
+    status: room.status,
+  });
 
+  RoomService.startTimer(room, io, () => {
+    handleEndRound(io, room);
+  });
+};
 export const handleSendMessage = (
   io: Server,
   socket: Socket

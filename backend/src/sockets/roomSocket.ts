@@ -2,7 +2,7 @@ import { Server, Socket } from 'socket.io';
 import { activeRooms, type Room } from '../utils/roomStore.ts';
 import { 
   handleJoinRoom, 
-  handleStartGame, 
+  handleStartRound, 
   handleSendMessage,
   handleDrawLine, 
   handleClearCanvas, 
@@ -28,7 +28,7 @@ export function registerRoomHandlers(io: Server, socket: Socket) {
   };
 
   socket.on('join_room', handleJoinRoom(io, socket));
-  socket.on('start_game', handleStartGame(io, socket, emitRoomSync, emitGameStarted));
+  socket.on('start_game', handleStartRound(io, socket));
   socket.on('send_message', handleSendMessage(io, socket));
   socket.on('draw_line', handleDrawLine(socket));
   socket.on('get_lines_history',getLinesHistory(socket));

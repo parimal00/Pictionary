@@ -24,6 +24,8 @@ export interface Room {
   lines: any[];
   drawerId?: string;
   currentWord?: string;
+  timer?: NodeJS.Timeout;
+  timeLeft?: number;
 }
 
 export const activeRooms = new Map<string, Room>();
