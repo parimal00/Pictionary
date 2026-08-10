@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { roomApi, type Room } from "../services/roomService";
+import { roomApi, type Room } from "../services/roomService.ts";
 import type { User } from "../types/user";
 
 export function useCreateRoom(onSuccessCallback: (roomCode: string) => void) {

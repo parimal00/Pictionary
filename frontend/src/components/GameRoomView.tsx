@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { User } from "../types/user";
-import { DrawingCanvas } from "./DrawingCanvas";
-import { socket } from "../socket.ts"; 
+import { DrawingCanvas } from "./DrawingCanvas.tsx";
+import { socket } from "../socket.ts";
+import { Modal } from "./Modal.tsx";
 
 interface Player {
   id: string;
@@ -26,11 +27,15 @@ export function GameRoomView({ user }: { user: User }) {
   const [gameState, setGameState] = useState<"LOBBY" | "PLAYING">("LOBBY");
   const [copied, setCopied] = useState(false);
   const [guessInput, setGuessInput] = useState("");
-  
+
   const [players, setPlayers] = useState<Player[]>([]);
   const [hostId, setHostId] = useState<string | null>(null);
 
   const [drawingWord, setDrawingWord] = useState<string | null>(null);
+
+  const [resultPlayers, setResultPlayers] = useState<Player[]>([]);
+
+  const [openResultModal, setOpenResultModal] = useState(false);
 
   const [chatMessages, setChatMessages] = useState<
     Array<{ sender: string; text: string; isSystem?: boolean }>
@@ -66,64 +71,72 @@ export function GameRoomView({ user }: { user: User }) {
   };
 
   const startGame = () => {
-    socket.emit("start_game",  roomCode );
+    socket.emit("start_game", roomCode);
+    console.log("Game started", roomCode);
   }
 
+  useEffect(() => {
+    if (!roomCode) return;
 
+    if (!socket.connected) {
+      socket.connect();
+    }
 
-useEffect(() => {
-  if (!roomCode) return;
+    socket.emit("join_room", { roomCode, user });
+  }, [roomCode, user]);
 
-  if (!socket.connected) {
-    socket.connect();
-  }
-
-  socket.emit("join_room", { roomCode, user });
-}, [roomCode, user]);
-
- const handleRoomUpdated = ({ players, hostId, status }: { players: Player[]; hostId: string; status: string }) => {
-  console.log("status", status)  
-  setPlayers(players);
+  const handleRoomUpdated = ({ players, hostId, status }: { players: Player[]; hostId: string; status: string }) => {
+    console.log("status", status)
+    setPlayers(players);
     setHostId(hostId);
-    setGameState(status);
+    setGameState(status as "LOBBY" | "PLAYING");
   };
 
- const handleChatHistory = (history: ChatMessage[]) => {
-      setChatMessages([
-        { sender: "System", text: `Welcome to room ${roomCode}!`, isSystem: true },
-        ...history,
-      ]);
-    };
+  const handleChatHistory = (history: ChatMessage[]) => {
+    setChatMessages([
+      { sender: "System", text: `Welcome to room ${roomCode}!`, isSystem: true },
+      ...history,
+    ]);
+  };
   const handleReceiveMessage = (newMessage: ChatMessage) => {
-      setChatMessages((prev) => [...prev, newMessage]);
-    };
-
-  const handleGameStarted = (data) => {
-    console.log("Game started event received:", data);
-    setGameState(data.status);
+    setChatMessages((prev) => [...prev, newMessage]);
   };
 
-  const handleNewRound = (data) => {
+  const handleGameStarted = (data: any) => {
+    console.log("Game started event received:", data);
+    setGameState(data.status as "LOBBY" | "PLAYING");
+  };
+
+  const handleNewRound = (data: any) => {
+    console.log("New round event received:", data);
     setDrawingWord(data.word);
   };
 
-useEffect(() => {
-  socket.on("room_updated", handleRoomUpdated);
-  socket.on("game_started", handleGameStarted);
-  socket.on("chat_history", handleChatHistory);
-  socket.on("receive_message", handleReceiveMessage);
-  socket.on('new_round', handleNewRound);
-
-  return () => {
-    socket.off("room_updated", handleRoomUpdated);
-    socket.off("game_started", handleGameStarted);
-    socket.off("chat_history", handleChatHistory);
-    socket.off("receive_message", handleReceiveMessage);
-    socket.off('new_round', handleNewRound);
+  const handleRoundCompleted = (data: any) => {
+    setOpenResultModal(true)
+    console.log("Round completed event received:", data);
+    setResultPlayers(data.players);
   };
-}, []); 
 
-useEffect(() => {
+  useEffect(() => {
+    socket.on("room_updated", handleRoomUpdated);
+    socket.on("game_started", handleGameStarted);
+    socket.on("chat_history", handleChatHistory);
+    socket.on("receive_message", handleReceiveMessage);
+    socket.on('new_round', handleNewRound);
+    socket.on('round_completed', handleRoundCompleted);
+
+    return () => {
+      socket.off("room_updated", handleRoomUpdated);
+      socket.off("game_started", handleGameStarted);
+      socket.off("chat_history", handleChatHistory);
+      socket.off("receive_message", handleReceiveMessage);
+      socket.off('new_round', handleNewRound);
+      socket.off('round_completed', handleRoundCompleted);
+    };
+  }, []);
+
+  useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
@@ -134,7 +147,7 @@ useEffect(() => {
           <button onClick={() => navigate("/lobby")} style={styles.leaveBtn}>
             <span style={{ marginRight: "6px" }}>←</span> Exit
           </button>
-          
+
           <div style={styles.roomBadgeContainer}>
             <span style={styles.roomLabel}>ROOM</span>
             <span style={styles.roomCodeText}>{roomCode}</span>
@@ -157,17 +170,17 @@ useEffect(() => {
         )}
 
         {gameState === "PLAYING" && (
-        <div style={styles.wordBanner}>
-          {drawingWord ? (
-            <span style={styles.drawerWordText}>
-              YOUR WORD: <strong>{drawingWord}</strong>
-            </span>
-          ) : (
-            <span style={styles.guessWordText}>
-              WORD: {drawingWord ? drawingWord.split('').map(() => '_ ').join('') : '_ _ _ _'}
-            </span>
-          )}
-        </div>
+          <div style={styles.wordBanner}>
+            {drawingWord ? (
+              <span style={styles.drawerWordText}>
+                YOUR WORD: <strong>{drawingWord}</strong>
+              </span>
+            ) : (
+              <span style={styles.guessWordText}>
+                WORD: {drawingWord ? drawingWord.split('').map(() => '_ ').join('') : '_ _ _ _'}
+              </span>
+            )}
+          </div>
         )}
       </header>
 
@@ -176,7 +189,7 @@ useEffect(() => {
           {gameState === "LOBBY" ? (
             <div style={styles.lobbyCard}>
               <div style={styles.iconCircle}>🎮</div>
-              <h2 style={{color:"white", margin: "0 0 8px 0", fontSize: "1.5rem", fontWeight: 700 }}>
+              <h2 style={{ color: "white", margin: "0 0 8px 0", fontSize: "1.5rem", fontWeight: 700 }}>
                 Waiting for Players
               </h2>
               <p style={{ color: "#94a3b8", fontSize: "0.95rem", margin: "0 0 24px 0" }}>
@@ -205,7 +218,7 @@ useEffect(() => {
                 </span>
               </div>
               <div style={styles.canvasArea}>
-                <DrawingCanvas roomCode={roomCode} isDrawingAllowed={true} />
+                <DrawingCanvas roomCode={roomCode!} isDrawingAllowed={true} />
               </div>
             </div>
           )}
@@ -277,6 +290,53 @@ useEffect(() => {
           </section>
         </aside>
       </div>
+
+      <Modal
+      isOpen={openResultModal}
+      title="🎉 Round Completed!"
+      onClose={() => setOpenResultModal(false)}
+      footer={
+        isHost ? (
+          <button onClick={() => startGame} style={styles.startBtn}>
+            Start Next Round 🚀
+          </button>
+        ) : (
+          <p style={{ color: "#94a3b8", fontSize: "0.875rem", margin: 0, fontStyle: "italic" }}>
+            Waiting for host to start next round...
+          </p>
+        )
+      }
+    >
+      <div style={{ textAlign: "center" }}>
+        <p style={{ color: "#cbd5e1", marginBottom: "12px" }}>
+          The secret word was:{" "}
+          <strong style={{ color: "#38bdf8", fontSize: "1.1rem" }}>
+            hello
+          </strong>
+        </p>
+
+        <div style={{ backgroundColor: "#0f172a", padding: "12px", borderRadius: "8px", border: "1px solid #334155" }}>
+          {/* <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: "bold", display: "block", marginBottom: "4px" }}>
+            CORRECT GUESSERS
+          </span> */}
+          {resultPlayers && resultPlayers.length > 0 ? (
+            <div>
+              {[...resultPlayers]
+                .sort((a, b) => b.score - a.score)
+                .map((p, index) => (
+                  <p key={index} style={{ color: "#34d399", fontWeight: "bold", margin: 0 }}>
+                    {p.username} - {p.score}
+                  </p>
+                ))}
+            </div>
+          ) : (
+             <p style={{ color: "#94a3b8", fontStyle: "italic", margin: 0 }}>
+              Nobody guessed correctly!
+            </p>
+          )}
+        </div>
+      </div>
+    </Modal>
     </div>
   );
 }
@@ -595,19 +655,19 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   wordBanner: {
-  backgroundColor: "#1e293b",
-  padding: "6px 16px",
-  borderRadius: "8px",
-  border: "1px solid #334155",
-  fontSize: "0.9rem",
-  fontWeight: 600,
-},
-drawerWordText: {
-  color: "#10b981",
-  letterSpacing: "1px",
-},
-guessWordText: {
-  color: "#38bdf8",
-  letterSpacing: "3px",
-},
+    backgroundColor: "#1e293b",
+    padding: "6px 16px",
+    borderRadius: "8px",
+    border: "1px solid #334155",
+    fontSize: "0.9rem",
+    fontWeight: 600,
+  },
+  drawerWordText: {
+    color: "#10b981",
+    letterSpacing: "1px",
+  },
+  guessWordText: {
+    color: "#38bdf8",
+    letterSpacing: "3px",
+  },
 };

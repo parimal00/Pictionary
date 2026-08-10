@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from "react-router-dom";
 import { type User } from "./types/user";
-import { GuestLogin } from "./components/GuestLogin";
+import { GuestLogin } from "./components/GuestLogin.tsx";
 import { Lobby } from "./components/Lobby.tsx";
 import { ProtectedRoute } from "./components/ProtectedRoute.tsx";
 import { GameRoomView } from "./components/GameRoomView.tsx";

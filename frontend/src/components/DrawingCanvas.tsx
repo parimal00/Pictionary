@@ -78,6 +78,11 @@ export function DrawingCanvas({ roomCode, isDrawingAllowed = true }: DrawingCanv
   const getDrawingHistory = () => {
     socket.emit("get_lines_history",  roomCode);
   }
+
+  const handleRoundCompleted = (data) => {
+    console.log("data", data)
+    clearLocalCanvas();
+  }
   useEffect(() => {
     clearLocalCanvas();
     getDrawingHistory();
@@ -93,6 +98,7 @@ export function DrawingCanvas({ roomCode, isDrawingAllowed = true }: DrawingCanv
       clearLocalCanvas();
     };
 
+    socket.on('round_completed', handleRoundCompleted);
     socket.on("drawing_history", handleDrawingHistory);
     socket.on("draw_line", handleRemoteDraw);
     socket.on("clear_canvas", handleRemoteClear);
@@ -101,6 +107,7 @@ export function DrawingCanvas({ roomCode, isDrawingAllowed = true }: DrawingCanv
       socket.off("draw_line", handleRemoteDraw);
       socket.off("clear_canvas", handleRemoteClear);
       socket.off('drawing_history', handleDrawingHistory);
+      socket.off('round_completed', handleRoundCompleted);
     };
   }, []);
 
