@@ -290,6 +290,7 @@ export function GameRoomView({ user }: { user: User }) {
                   {msg.text}
                 </div>
               ))}
+              <div ref={chatBottomRef} />
             </div>
 
             <form onSubmit={handleSendGuess} style={styles.chatForm}>
@@ -362,7 +363,7 @@ export function GameRoomView({ user }: { user: User }) {
     >
       <div style={{ textAlign: "center" }}>
         <div style={{ backgroundColor: "#0f172a", padding: "12px", borderRadius: "8px", border: "1px solid #334155" }}>
-        
+
              <p style={{ color: "#94a3b8", fontStyle: "italic", margin: 0 }}>
               The secret word is {drawingWord}
             </p>
@@ -635,6 +636,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     padding: "1rem",
+    maxHeight: "500px",
   },
   chatLog: {
     flex: 1,
