@@ -366,7 +366,6 @@ export function GameRoomView({ user }: { user: User }) {
              <p style={{ color: "#94a3b8", fontStyle: "italic", margin: 0 }}>
               The secret word is {drawingWord}
             </p>
-        
         </div>
       </div>
     </Modal>
