@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { type User } from '../types/user';
 import { useCreateRoom, useJoinRoom } from '../hooks/useRoom.ts';
+import { useWindowSize } from '../hooks/useWindowSize.ts';
 
 interface LobbyProps {
   user: User;
@@ -11,6 +12,8 @@ interface LobbyProps {
 
 export function Lobby({ user, onEnterRoom, onLogout }: LobbyProps) {
   const [roomCode, setRoomCode] = useState('');
+  const { width } = useWindowSize();
+  const isMobile = width < 480;
 
   const createRoomMutation = useCreateRoom(onEnterRoom);
   const joinRoomMutation = useJoinRoom(onEnterRoom);
@@ -30,7 +33,10 @@ export function Lobby({ user, onEnterRoom, onLogout }: LobbyProps) {
 
   return (
     <div style={styles.container}>
-      <div style={styles.card}>
+      <div style={{
+        ...styles.card,
+        padding: isMobile ? '1.5rem' : '2rem',
+      }}>
 
         <div style={styles.topBar}>
           <div style={styles.userBadge}>
@@ -43,7 +49,10 @@ export function Lobby({ user, onEnterRoom, onLogout }: LobbyProps) {
         </div>
 
         <div style={styles.header}>
-          <h1 style={styles.title}>Game Lobby</h1>
+          <h1 style={{
+            ...styles.title,
+            fontSize: isMobile ? '1.5rem' : '1.8rem',
+          }}>Game Lobby</h1>
           <p style={styles.subtitle}>Host a private game or join your friends</p>
         </div>
 
@@ -57,6 +66,7 @@ export function Lobby({ user, onEnterRoom, onLogout }: LobbyProps) {
               ...styles.primaryBtn,
               opacity: isPending ? 0.7 : 1,
               cursor: isPending ? 'not-allowed' : 'pointer',
+              padding: isMobile ? '0.85rem' : '1rem',
             }}
           >
             {createRoomMutation.isPending ? 'Creating Room...' : '✨ Create Private Room'}
@@ -74,7 +84,11 @@ export function Lobby({ user, onEnterRoom, onLogout }: LobbyProps) {
               onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
               maxLength={6}
               disabled={isPending}
-              style={styles.codeInput}
+              style={{
+                ...styles.codeInput,
+                fontSize: isMobile ? '1rem' : '1.1rem',
+                padding: isMobile ? '0.8rem' : '0.9rem',
+              }}
             />
             <button
               type="submit"
@@ -83,6 +97,7 @@ export function Lobby({ user, onEnterRoom, onLogout }: LobbyProps) {
                 ...styles.secondaryBtn,
                 opacity: roomCode.trim() && !isPending ? 1 : 0.6,
                 cursor: roomCode.trim() && !isPending ? 'pointer' : 'not-allowed',
+                padding: isMobile ? '0.8rem' : '0.9rem',
               }}
             >
               {joinRoomMutation.isPending ? 'Joining...' : 'Join Game 🚀'}

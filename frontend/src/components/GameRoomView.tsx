@@ -4,6 +4,7 @@ import type { User } from "../types/user";
 import { DrawingCanvas } from "./DrawingCanvas.tsx";
 import { socket } from "../socket.ts";
 import { Modal } from "./Modal.tsx";
+import { useWindowSize } from "../hooks/useWindowSize.ts";
 
 interface Player {
   id: string;
@@ -22,6 +23,8 @@ interface ChatMessage {
 
 export function GameRoomView({ user }: { user: User }) {
   const navigate = useNavigate();
+  const { width } = useWindowSize();
+  const isMobile = width < 768;
 
   const { roomCode } = useParams<{ roomCode: string }>();
 
@@ -163,8 +166,18 @@ export function GameRoomView({ user }: { user: User }) {
 }, [isTimerRunning, timeLeft]);
   return (
     <div style={styles.container}>
-      <header style={styles.navbar}>
-        <div style={styles.navLeft}>
+      <header style={{
+        ...styles.navbar,
+        flexDirection: isMobile ? "column" : "row",
+        gap: isMobile ? "12px" : "0",
+        padding: isMobile ? "1rem" : "0.75rem 1.5rem",
+        height: "auto"
+      }}>
+        <div style={{
+          ...styles.navLeft,
+          width: isMobile ? "100%" : "auto",
+          justifyContent: isMobile ? "space-between" : "flex-start"
+        }}>
           <button onClick={() => navigate("/lobby")} style={styles.leaveBtn}>
             <span style={{ marginRight: "6px" }}>←</span> Exit
           </button>
@@ -173,36 +186,50 @@ export function GameRoomView({ user }: { user: User }) {
             <span style={styles.roomLabel}>ROOM</span>
             <span style={styles.roomCodeText}>{roomCode}</span>
             <button onClick={handleCopyCode} style={styles.copyBtn}>
-              {copied ? "✓ Copied" : "Copy"}
+              {copied ? "✓" : "Copy"}
             </button>
           </div>
         </div>
 
-        {gameState === "PLAYING" && (
-          <div style={styles.gameInfoPills}>
-            <div style={{ ...styles.pill, borderColor: "#f59e0b" }}>
-              <span style={{ color: "#f59e0b" }}>⏱️ {timeLeft}s</span>
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          width: isMobile ? "100%" : "auto",
+          justifyContent: isMobile ? "space-between" : "flex-end"
+        }}>
+          {gameState === "PLAYING" && (
+            <div style={styles.gameInfoPills}>
+              <div style={{ ...styles.pill, borderColor: "#f59e0b" }}>
+                <span style={{ color: "#f59e0b" }}>⏱️ {timeLeft}s</span>
+              </div>
             </div>
-          </div>
         )}
 
-        {gameState === "PLAYING" && (
-          <div style={styles.wordBanner}>
-            {drawingWord ? (
-              <span style={styles.drawerWordText}>
-                YOUR WORD: <strong>{drawingWord}</strong>
-              </span>
-            ) : (
-              <span style={styles.guessWordText}>
-                WORD: {drawingWord ? drawingWord.split('').map(() => '_ ').join('') : '_ _ _ _'}
-              </span>
-            )}
-          </div>
-        )}
+          {gameState === "PLAYING" && (
+            <div style={styles.wordBanner}>
+              {drawingWord ? (
+                <span style={styles.drawerWordText}>
+                  WORD: <strong>{drawingWord}</strong>
+                </span>
+              ) : (
+                <span style={styles.guessWordText}>
+                  {drawingWord ? drawingWord.split('').map(() => '_ ').join('') : '_ _ _ _'}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       </header>
 
-      <div style={styles.mainContent}>
-        <main style={styles.centerStage}>
+      <div style={{
+        ...styles.mainContent,
+        flexDirection: isMobile ? "column" : "row",
+      }}>
+        <main style={{
+          ...styles.centerStage,
+          padding: isMobile ? "0.75rem" : "1.5rem",
+        }}>
           {gameState === "LOBBY" ? (
             <div style={styles.lobbyCard}>
               <div style={styles.iconCircle}>🎮</div>
@@ -241,8 +268,18 @@ export function GameRoomView({ user }: { user: User }) {
           )}
         </main>
 
-        <aside style={styles.sidebar}>
-          <section style={styles.playerSection}>
+        <aside style={{
+          ...styles.sidebar,
+          width: isMobile ? "100%" : "320px",
+          height: isMobile ? "auto" : "100%",
+          borderLeft: isMobile ? "none" : "1px solid #1e293b",
+          borderTop: isMobile ? "1px solid #1e293b" : "none",
+        }}>
+          <section style={{
+            ...styles.playerSection,
+            flex: isMobile ? "none" : "0 0 45%",
+            maxHeight: isMobile ? "150px" : "none",
+          }}>
             <div style={styles.sectionHeader}>
               <span style={styles.sectionTitle}>PLAYERS</span>
               <span style={styles.badgeCount}>{players.length}</span>
@@ -273,7 +310,10 @@ export function GameRoomView({ user }: { user: User }) {
             </div>
           </section>
 
-          <section style={styles.chatSection}>
+          <section style={{
+            ...styles.chatSection,
+            height: isMobile ? "300px" : "auto",
+          }}>
             <div style={styles.sectionHeader}>
               <span style={styles.sectionTitle}>LIVE GUESSES</span>
             </div>
@@ -291,6 +331,7 @@ export function GameRoomView({ user }: { user: User }) {
                 </div>
               ))}
               <div ref={chatBottomRef} />
+              
             </div>
 
             <form onSubmit={handleSendGuess} style={styles.chatForm}>

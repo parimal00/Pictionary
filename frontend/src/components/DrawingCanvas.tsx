@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import { socket } from "../socket";
+import { useWindowSize } from "../hooks/useWindowSize.ts";
 
 interface Point {
   x: number;
@@ -22,6 +23,13 @@ const COLORS = ["#000000", "#ef4444", "#3b82f6", "#22c55e", "#eab308", "#a855f7"
 const BRUSH_SIZES = [2, 6, 12, 24];
 
 export function DrawingCanvas({ roomCode, isDrawingAllowed = true }: DrawingCanvasProps) {
+  const { width } = useWindowSize();
+
+
+
+  
+  const isMobile = width < 768;
+
   console.log("roomcoe",roomCode)
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const prevPointRef = useRef<Point | null>(null);
@@ -111,7 +119,7 @@ export function DrawingCanvas({ roomCode, isDrawingAllowed = true }: DrawingCanv
     };
   }, []);
 
-  const getCoordinates = (e: React.MouseEvent<HTMLCanvasElement>): Point => {
+  const getCoordinates = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>): Point => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
 
@@ -119,9 +127,18 @@ export function DrawingCanvas({ roomCode, isDrawingAllowed = true }: DrawingCanv
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
 
+    let clientX, clientY;
+    if ('touches' in e) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
     return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
     };
   };
 
@@ -140,7 +157,7 @@ export function DrawingCanvas({ roomCode, isDrawingAllowed = true }: DrawingCanv
     });
   };
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!isDrawingAllowed) return;
     const currentPoint = getCoordinates(e);
 
@@ -150,7 +167,7 @@ export function DrawingCanvas({ roomCode, isDrawingAllowed = true }: DrawingCanv
     handleDraw(currentPoint, null);
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!isDrawing || !isDrawingAllowed) return;
     const currentPoint = getCoordinates(e);
 
@@ -174,7 +191,12 @@ export function DrawingCanvas({ roomCode, isDrawingAllowed = true }: DrawingCanv
   return (
     <div style={styles.wrapper}>
       {isDrawingAllowed && (
-        <div style={styles.toolbar}>
+        <div style={{
+          ...styles.toolbar,
+          flexWrap: isMobile ? "wrap" : "nowrap",
+          gap: isMobile ? "12px" : "8px",
+          padding: isMobile ? "8px" : "8px 16px",
+        }}>
           <div style={styles.group}>
             {COLORS.map((c) => (
               <button
@@ -188,6 +210,8 @@ export function DrawingCanvas({ roomCode, isDrawingAllowed = true }: DrawingCanv
                   backgroundColor: c,
                   border: color === c && !isEraser ? "2px solid #38bdf8" : "1px solid #475569",
                   transform: color === c && !isEraser ? "scale(1.15)" : "scale(1)",
+                  width: isMobile ? "20px" : "24px",
+                  height: isMobile ? "20px" : "24px",
                 }}
               />
             ))}
@@ -204,12 +228,14 @@ export function DrawingCanvas({ roomCode, isDrawingAllowed = true }: DrawingCanv
                   ...styles.sizeBtn,
                   border: brushSize === size ? "1px solid #38bdf8" : "1px solid #334155",
                   backgroundColor: brushSize === size ? "#1e293b" : "transparent",
+                  width: isMobile ? "28px" : "32px",
+                  height: isMobile ? "28px" : "32px",
                 }}
               >
                 <span
                   style={{
-                    width: `${size / 1.5}px`,
-                    height: `${size / 1.5}px`,
+                    width: `${size / (isMobile ? 2 : 1.5)}px`,
+                    height: `${size / (isMobile ? 2 : 1.5)}px`,
                     borderRadius: "50%",
                     backgroundColor: isEraser ? "#94a3b8" : color,
                   }}
@@ -247,9 +273,13 @@ export function DrawingCanvas({ roomCode, isDrawingAllowed = true }: DrawingCanv
           onMouseMove={draw}
           onMouseUp={stopDrawing}
           onMouseLeave={stopDrawing}
+          onTouchStart={startDrawing}
+          onTouchMove={draw}
+          onTouchEnd={stopDrawing}
           style={{
             ...styles.canvas,
             cursor: isDrawingAllowed ? (isEraser ? "cell" : "crosshair") : "default",
+            touchAction: "none",
           }}
         />
       </div>
