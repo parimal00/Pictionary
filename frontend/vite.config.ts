@@ -11,9 +11,7 @@ export default defineConfig({
     },
   },
   server: {
-    allowedHosts: [
-      "parimalbhattarai.com",
-      "www.parimalbhattarai.com",
-    ],
+    host: true, // Listens on all local IP addresses (0.0.0.0)
+    allowedHosts: true, // Allows all incoming host headers
   },
 });
