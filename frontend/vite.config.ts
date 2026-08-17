@@ -10,4 +10,10 @@ export default defineConfig({
       "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
+  server: {
+    allowedHosts: [
+      "parimalbhattarai.com",
+      "www.parimalbhattarai.com",
+    ],
+  },
 });
