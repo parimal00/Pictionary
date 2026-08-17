@@ -21,7 +21,11 @@ const app = express()
 connectDB()
 const httpServer = createServer(app)
 
-
+// Add this near the top of your middleware stack
+app.use((req, res, next) => {
+  console.log("Incoming Request Origin:", req.headers.origin);
+  next();
+});
 app.use(helmet());
 app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5174' }));
 app.use(express.json());
