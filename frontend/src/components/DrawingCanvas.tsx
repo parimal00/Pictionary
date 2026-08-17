@@ -87,8 +87,7 @@ export function DrawingCanvas({ roomCode, isDrawingAllowed = true }: DrawingCanv
     socket.emit("get_lines_history",  roomCode);
   }
 
-  const handleRoundCompleted = (data) => {
-    console.log("data", data)
+  const handleRoundCompleted = () => {
     clearLocalCanvas();
   }
   useEffect(() => {
