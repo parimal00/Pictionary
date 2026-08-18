@@ -33,8 +33,8 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(morgan('dev'));
-app.use(authRoutes);
-app.use(roomRoutes);
+app.use('/api',authRoutes);
+app.use('/api',roomRoutes);
 
 const CLIENT_ORIGIN = process.env.CLIENT_URL || 'http://localhost:5174';
 
